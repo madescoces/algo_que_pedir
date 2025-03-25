@@ -1,8 +1,8 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
 	kotlin("jvm") version "1.9.25"
-	kotlin("plugin.spring") version "1.9.25"
-	id("org.springframework.boot") version "3.4.3"
-	id("io.spring.dependency-management") version "1.1.7"
+	jacoco
 }
 
 group = "ar.edu.unsam.algo2"
@@ -17,21 +17,48 @@ java {
 repositories {
 	mavenCentral()
 }
-
+val kotestVersion = "5.9.1"
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	implementation(kotlin("stdlib"))
+	implementation("org.uqbar-project:geodds-xtend:1.0.3")
+	testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+	testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+	testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
 }
 
-kotlin {
-	compilerOptions {
-		freeCompilerArgs.addAll("-Xjsr305=strict")
+tasks.withType<KotlinCompile> {
+	kotlinOptions {
+		freeCompilerArgs = listOf("-Xjsr305=strict")
+		jvmTarget = "21"
 	}
 }
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+tasks.test {
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+}
+
+jacoco {
+	toolVersion = "0.8.12"
+}
+
+tasks.jacocoTestReport {
+	reports {
+		xml.required.set(true)
+		csv.required.set(false)
+		html.outputLocation.set(layout.buildDirectory.dir("jacocoHtml"))
+	}
+}
+
+tasks.register("runOnGitHub") {
+	dependsOn("jacocoTestReport")
+	group = "custom"
+	description = "$ ./gradlew runOnGitHub # runs on GitHub Action"
 }
